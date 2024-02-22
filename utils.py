@@ -6,7 +6,7 @@ import streamlit as st
 
 # decorator
 def enable_chat_history(func):
-    if os.environ.get("OPENAI_API_KEY"):
+    if os.environ.get("AZURE_OPENAI_API_KEY"):
 
         # to clear chat history after swtching chatbot
         current_page = func.__qualname__
@@ -63,37 +63,3 @@ def configure_openai_api_key():
         st.error("Please add your OpenAI API key to continue.")
         st.stop()
     return openai_api_key
-
-def configure_azure_openai_api_key():
-    openai_api_base = openai_api_base or get_env("OPENAI_API_BASE")
-    openai_api_version = openai_api_version or get_env("OPENAI_API_VERSION")
-    deployment_name = deployment_name or get_env("OPENAI_DEPLOYMENT_NAME")
-    openai_api_key = openai_api_key or get_env("OPENAI_API_KEY")
-    openai_api_type = "azure"
-    return AzureChatOpenAI(
-        openai_api_base=openai_api_base,
-        openai_api_version=openai_api_version,
-        deployment_name=deployment_name,
-        openai_api_key=openai_api_key,
-        openai_api_type=openai_api_type,
-        temperature=0.0,
-
-
-    openai_api_key = st.sidebar.text_input(
-        label="OpenAI API Key",
-        type="password",
-        value=(
-            st.session_state["OPENAI_API_KEY"]
-            if "OPENAI_API_KEY" in st.session_state
-            else ""
-        ),
-        placeholder="sk-...",
-    )
-    if openai_api_key:
-        st.session_state["OPENAI_API_KEY"] = openai_api_key
-        os.environ["OPENAI_API_KEY"] = openai_api_key
-    else:
-        st.error("Please add your OpenAI API key to continue.")
-        st.stop()
-    return openai_api_key
-

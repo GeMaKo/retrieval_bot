@@ -1,14 +1,19 @@
+import logging
 import os
 import uuid
 
 import dotenv
 import streamlit as st
-from langchain.agents import AgentType, Tool, initialize_agent
+from langchain import hub
+from langchain.agents import AgentExecutor, Tool, create_structured_chat_agent
 from langchain_community.callbacks import StreamlitCallbackHandler
 from langchain_community.utilities import GoogleSerperAPIWrapper
-from langchain_openai import AzureChatOpenAI, ChatOpenAI
+from langchain_core.messages import AIMessage, HumanMessage
+from langchain_openai import AzureChatOpenAI
 
 import utils
+
+logger = logging.getLogger(__name__)
 
 dotenv.load_dotenv()
 
@@ -24,6 +29,7 @@ class URLSerper(GoogleSerperAPIWrapper):
         """Run query through GoogleSearch and parse result."""
         url = os.getenv("URL")
         query = f"site:{url} {query}"
+        logger.info("Query: %s" % query)
         results = super()._google_serper_api_results(
             query,
             gl=self.gl,
@@ -38,12 +44,7 @@ class URLSerper(GoogleSerperAPIWrapper):
 
 class ChatbotTools:
     def __init__(self):
-        utils.configure_openai_api_key()
-        self.openai_api_base = get_env("OPENAI_API_BASE")
-        self.openai_api_version = get_env("OPENAI_API_VERSION")
-        self.deployment_name = get_env("OPENAI_DEPLOYMENT_NAME")
-        self.openai_api_key = get_env("OPENAI_API_KEY")
-        self.openai_api_type = "azure"
+        # utils.configure_openai_api_key()
         self.sources_id = str(uuid.uuid4())
 
     def setup_agent(self):
@@ -60,32 +61,36 @@ class ChatbotTools:
         # Setup LLM and Agent
         # llm = ChatOpenAI(model_name=self.openai_model, streaming=True)
         llm = AzureChatOpenAI(
-            openai_api_base=self.openai_api_base,
-            openai_api_version=self.openai_api_version,
-            deployment_name=self.deployment_name,
-            openai_api_key=self.openai_api_key,
-            openai_api_type=self.openai_api_type,
+            openai_api_version=os.getenv("OPENAI_API_VERSION"),
+            azure_deployment=os.getenv("AZURE_DEPLOYMENT"),
             temperature=0.0,
             streaming=True,
         )
-        agent = initialize_agent(
+        prompt = hub.pull("hwchase17/structured-chat-agent")
+        agent = create_structured_chat_agent(
             tools=tools,
             llm=llm,
-            agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-            handle_parsing_errors=True,
-            verbose=True,
+            prompt=prompt,
         )
-        return agent
+        agent_executor = AgentExecutor(
+            agent=agent, tools=tools, verbose=True, handle_parsing_errors=True
+        )
+        return agent_executor
 
     @utils.enable_chat_history
     def main(self):
-        agent = self.setup_agent()
+        agent_executor = self.setup_agent()
         user_query = st.chat_input(placeholder="Ask me anything!")
         if user_query:
             utils.display_msg(user_query, "user")
             with st.chat_message("assistant"):
-                st_cb = StreamlitCallbackHandler(st.container())
-                response = agent.run(user_query, callbacks=[st_cb])
+                st_callback = StreamlitCallbackHandler(st.container())
+                response = agent_executor.invoke(
+                    {
+                        "input": user_query,
+                    },
+                    {"callbacks": [st_callback]},
+                )
                 st.session_state.messages.append(
                     {"role": "assistant", "content": response}
                 )

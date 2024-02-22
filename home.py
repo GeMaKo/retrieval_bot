@@ -1,4 +1,9 @@
+import logging
+
 import streamlit as st
+
+logger = logging.getLogger(__name__)
+
 
 st.set_page_config(page_title="Langchain Chatbot", page_icon="💬", layout="wide")
 
