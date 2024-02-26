@@ -1,17 +1,17 @@
 import logging
 import os
 import uuid
+from typing import Any, Dict, List
 
 import dotenv
 import streamlit as st
 from langchain import hub
 from langchain.agents import AgentExecutor, Tool, create_structured_chat_agent
+from langchain.callbacks.base import BaseCallbackHandler
 from langchain_community.callbacks import StreamlitCallbackHandler
 from langchain_community.utilities import GoogleSerperAPIWrapper
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_openai import AzureChatOpenAI
-from langchain.callbacks.base import BaseCallbackHandler
-)
 
 import utils
 
@@ -27,9 +27,15 @@ sources = {}
 
 
 class URLSerper(GoogleSerperAPIWrapper):
-    def __init__(self, url):
-        self.search_url = search_url
-        super().__init__(self)
+    _search_url: str = ""
+
+    @property
+    def search_url(self):
+        return self._search_url
+
+    @search_url.setter
+    def search_url(self, value):
+        self._search_url = value
 
     def run(self, query: str) -> str:
         """Run query through GoogleSearch and parse result."""
@@ -43,10 +49,10 @@ class URLSerper(GoogleSerperAPIWrapper):
             tbs=self.tbs,
             search_type=self.type,
         )
-                
+
         output = super()._parse_results(results)
         return output
-    
+
 
 class SourceCallbackHandler(BaseCallbackHandler):
     def __init__(self):
@@ -54,18 +60,17 @@ class SourceCallbackHandler(BaseCallbackHandler):
         self.sources = {}
 
     def on_chat_model_start(
-        self, serialized: Dict[str, Any], messages: List[List[BaseMessage]], **kwargs: Any
+        self,
+        serialized: Dict[str, Any],
+        messages: List[List[BaseMessage]],
+        **kwargs: Any,
     ) -> Any:
         """Run when Chat Model starts running."""
         self.sources_id = str(uuid.uuid4())
-    
+
     def on_tool_end(self, output: str, **kwargs: Any) -> Any:
         """Run when tool ends running"""
-        cached_sources = mrkl.sources.SOURCES.get(sources_id, [])
-        if source not in cached_sources:
-            cached_sources.append(source)
-            mrkl.sources.SOURCES[sources_id] = cached_sources
-
+        pass
 
 
 class ChatbotTools:
@@ -75,8 +80,8 @@ class ChatbotTools:
 
     def setup_agent(self):
         # Define tool
-        transdev_search = URLSerper("transdev.de")
-        deutschlandticket_search = URLSerper("d-ticket.info")
+        transdev_search = URLSerper(search_url="transdev.de")
+        deutschlandticket_search = URLSerper(search_url="d-ticket.info")
         tools = [
             Tool(
                 name="Transdev Search",
@@ -87,7 +92,7 @@ class ChatbotTools:
                 name="Deutschlandticket Search",
                 func=deutschlandticket_search.run,
                 description="Useful for when you need to answer questions about the Deutschlandticket",
-            )
+            ),
         ]
 
         # Setup LLM and Agent
