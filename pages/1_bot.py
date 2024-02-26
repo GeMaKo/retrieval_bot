@@ -27,15 +27,9 @@ sources = {}
 
 
 class URLSerper(GoogleSerperAPIWrapper):
-    _search_url: str = ""
-
-    @property
-    def search_url(self):
-        return self._search_url
-
-    @search_url.setter
-    def search_url(self, value):
-        self._search_url = value
+    search_url: str = ""
+    gl: str = "de"
+    hl: str = "de"
 
     def run(self, query: str) -> str:
         """Run query through GoogleSearch and parse result."""
