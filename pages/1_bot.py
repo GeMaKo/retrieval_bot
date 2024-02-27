@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 dotenv.load_dotenv()
 
 st.set_page_config(page_title="ChatWeb", page_icon="🌐")
-st.header("Chatbot to URL")
-st.write("Enables users to ask questions about the contents of a web site")
+st.header("Chatbot to URLs (transdev.de, d-ticket.info)")
+st.write("Enables users to ask questions about the contents of web sites")
 
 sources = {}
 
